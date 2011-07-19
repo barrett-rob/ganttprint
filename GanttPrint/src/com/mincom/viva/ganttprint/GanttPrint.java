@@ -6,6 +6,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
+
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -42,6 +46,21 @@ public class GanttPrint {
 		}
 	}
 
+	private final float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
+	private final float dataWidth;
+	{
+		int dw = 0;
+		for (int i = 0; i < dataWidths.length; dw += dataWidths[i++])
+			;
+		dataWidth = dw;
+	}
+	private final float[] totalWidths = new float[dataWidths.length + 1];
+	private final float barWidth;
+	private final PdfPTable table = new PdfPTable(totalWidths.length);
+	{
+		table.setHorizontalAlignment(PdfPTable.ALIGN_LEFT);
+		table.setLockedWidth(true);
+	}
 	private final PdfWriter pdfWriter;
 	private final Document document;
 	private final ByteArrayOutputStream baos;
@@ -50,14 +69,10 @@ public class GanttPrint {
 
 	private final SimpleDateFormat sdf = new SimpleDateFormat(
 			"yyyy/MM/dd HH:mm");
-
 	{
 		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
 
-	private PdfPTable table;
-	private float dataWidth = 0;
-	float barWidth = 0;
 	Date first = null, last = null;
 	private long range;
 
@@ -74,6 +89,11 @@ public class GanttPrint {
 		this.size = size;
 		try {
 			logger.debug("creating document for gantt print");
+			for (int i = 0; i < dataWidths.length; i++)
+				totalWidths[i] = dataWidths[i];
+			barWidth = size.rectangle.getWidth() - dataWidth - BORDER_PADDING
+					* 2 - 2;
+			totalWidths[totalWidths.length - 1] = barWidth;
 			pdfWriter = PdfWriter.getInstance(document = new Document(
 					this.size.rectangle),
 					this.baos = new ByteArrayOutputStream());
@@ -99,7 +119,7 @@ public class GanttPrint {
 		}
 	}
 
-	private void establishDateRange() throws DocumentException {
+	private void establishDateRange() {
 		for (ScheduleItem si : schedule) {
 			Date start = si.getStart();
 			if (first == null)
@@ -114,29 +134,41 @@ public class GanttPrint {
 		}
 		logger.debug("first: {}", sdf.format(first));
 		logger.debug("last: {}", sdf.format(last));
-		range = last.getTime() - first.getTime();
-		if (range <= 0)
+		if (first.after(last))
 			throw new IllegalStateException("first start date [" + first
 					+ "] is after last finish date [" + last + "]");
+		padDateRange();
+	}
+
+	private void padDateRange() {
+		DateTime dtfirst = new DateTime(first);
+		DateTime dtlast = new DateTime(last);
+
+		/* pad out to week boundaries */
+		dtfirst = dtfirst.withDayOfWeek(1).withMillisOfDay(0);
+		dtlast = dtlast.withDayOfWeek(1).minusDays(1).plusWeeks(1);
+
+		/* if close to week boundaries pad out by another week */
+		if (new Interval(dtfirst.getMillis(), first.getTime()).toDuration()
+				.isShorterThan(Duration.standardDays(2))) {
+			dtfirst.minusWeeks(1);
+		}
+		if (new Interval(last.getTime(), dtlast.getMillis()).toDuration()
+				.isShorterThan(Duration.standardDays(2))) {
+			dtlast.plusWeeks(1);
+		}
+
+		/* set state */
+		first = dtfirst.toDate();
+		last = dtlast.toDate();
+		range = last.getTime() - first.getTime();
 	}
 
 	private void printScheduleData() throws DocumentException {
 
 		logger.debug("printing schedule ");
 
-		float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
-		for (float f : dataWidths)
-			dataWidth += f;
-		float[] totalWidths = new float[dataWidths.length + 1];
-		for (int i = 0; i < dataWidths.length; i++)
-			totalWidths[i] = dataWidths[i];
-		barWidth = size.rectangle.getWidth() - dataWidth - BORDER_PADDING * 2
-				- 2;
-		totalWidths[totalWidths.length - 1] = barWidth;
-		table = new PdfPTable(totalWidths.length);
-		table.setHorizontalAlignment(PdfPTable.ALIGN_LEFT);
 		table.setTotalWidth(totalWidths);
-		table.setLockedWidth(true);
 
 		/* set header rows */
 		table.addCell(newHeaderCell("Work Order"));
