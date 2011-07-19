@@ -10,6 +10,7 @@
   <dependencies>
     
     <dependency org="commons-dbcp" name="commons-dbcp" rev="latest.integration" conf="default" />
+    <dependency org="joda-time" name="joda-time" rev="latest.integration" conf="default" />
     
     <dependency org="mincom.external" name="spring" rev="${infrastructure.version}" conf="default" />
     <dependency org="mincom.external" name="itext" rev="${infrastructure.version}" conf="default" />

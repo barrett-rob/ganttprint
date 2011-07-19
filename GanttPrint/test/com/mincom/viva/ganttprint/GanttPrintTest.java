@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcTemplate;
@@ -44,28 +45,28 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 
 	public void testOne() throws IOException {
 		Schedule s = new Schedule();
-		s.add(newScheduleItem());
+		s.add(newScheduleItem(0));
 		GanttPrint gp = new GanttPrint(s);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
 	}
 
-	private ScheduleItem newScheduleItem() {
+	private ScheduleItem newScheduleItem(int i) {
 		ScheduleItem si = new ScheduleItem();
 		si.setWorkOrder("12345678");
 		si.setTaskNo("001");
 		si.setDescription("work order description has 40 characters");
-		Date start = new Date();
-		si.setStart(start);
-		Date finish = new Date(start.getTime() + 1000 * 60 * 60);
-		si.setFinish(finish);
+		DateTime start = new DateTime().plusDays(i);
+		si.setStart(start.toDate());
+		DateTime finish = new DateTime(start).plusHours(8);
+		si.setFinish(finish.toDate());
 		return si;
 	}
 
 	public void testSome() throws IOException {
 		Schedule s = new Schedule();
 		for (int i = 0; i < 100; i++)
-			s.add(newScheduleItem());
+			s.add(newScheduleItem(i));
 		GanttPrint gp = new GanttPrint(s);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
@@ -83,7 +84,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 
 		@SuppressWarnings({ "deprecation" })
 		List<ScheduleItem> scheduleItems = simpleJdbcTemplate
-				.query("SELECT * FROM MSF623 WHERE PLAN_STR_DATE != ' ' AND PLAN_FIN_DATE != ' ' AND ROWNUM < 500",
+				.query("SELECT * FROM MSF623 WHERE PLAN_STR_DATE != ' ' AND PLAN_FIN_DATE != ' '",
 						new ParameterizedRowMapper<ScheduleItem>() {
 
 							@Override
