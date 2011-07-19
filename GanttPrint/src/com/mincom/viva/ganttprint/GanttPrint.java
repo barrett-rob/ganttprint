@@ -15,6 +15,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPCellEvent;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfPageEvent;
 import com.lowagie.text.pdf.PdfWriter;
@@ -55,6 +56,9 @@ public class GanttPrint {
 	}
 
 	private PdfPTable table;
+	private float dataWidth = 0;
+	private float remainder = 0;
+	Date first = null, last = null;
 
 	public GanttPrint(Schedule s) {
 		this(s, SIZE.A2);
@@ -82,8 +86,8 @@ public class GanttPrint {
 				document.add(new Paragraph(BORDER_PADDING * 3,
 						"   *** no data ***"));
 			} else {
+				establishDateRange();
 				printScheduleData();
-				printScheduleBars();
 			}
 			document.close();
 			baos.flush();
@@ -94,25 +98,40 @@ public class GanttPrint {
 		}
 	}
 
+	private void establishDateRange() throws DocumentException {
+		for (ScheduleItem si : schedule) {
+			Date start = si.getStart();
+			if (first == null)
+				first = start;
+			if (first.compareTo(start) > 0)
+				first = start;
+			Date finish = si.getFinish();
+			if (last == null)
+				last = finish;
+			if (last.compareTo(finish) < 0)
+				last = finish;
+		}
+		System.out.println("first: " + sdf.format(first));
+		System.out.println("last: " + sdf.format(last));
+	}
+
 	private void printScheduleData() throws DocumentException {
 
 		logger.debug("printing schedule ");
 
 		float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
-		float dataWidth = 0;
 		for (float f : dataWidths)
 			dataWidth += f;
 		float[] totalWidths = new float[dataWidths.length + 1];
 		for (int i = 0; i < dataWidths.length; i++)
 			totalWidths[i] = dataWidths[i];
-		float remainder = size.rectangle.getWidth() - dataWidth
-				- BORDER_PADDING * 2 - 2;
+		remainder = size.rectangle.getWidth() - dataWidth - BORDER_PADDING * 2
+				- 2;
 		totalWidths[totalWidths.length - 1] = remainder;
 		table = new PdfPTable(totalWidths.length);
 		table.setHorizontalAlignment(PdfPTable.ALIGN_LEFT);
 		table.setTotalWidth(totalWidths);
 		table.setLockedWidth(true);
-		// table.setWidths(new int[] { 9, 5, 35, 15, 15 });
 
 		/* set header rows */
 		table.addCell(newHeaderCell("Work Order"));
@@ -136,7 +155,9 @@ public class GanttPrint {
 			if (finish == null)
 				finish = "null";
 			table.addCell(newDataCell(finish));
-			table.addCell(newCell(/* empty */));
+			PdfPCell cell = newCell(/* empty */);
+			cell.setCellEvent(new GanttPrintPdfPCellEvent(si));
+			table.addCell(cell);
 		}
 		table.setComplete(true);
 		document.add(table);
@@ -172,25 +193,6 @@ public class GanttPrint {
 		return cell;
 	}
 
-	private void printScheduleBars() throws DocumentException {
-		/* establish date range */
-		Date first = null, last = null;
-		for (ScheduleItem si : schedule) {
-			Date start = si.getStart();
-			if (first == null)
-				first = start;
-			if (first.compareTo(start) > 0)
-				first = start;
-			Date finish = si.getFinish();
-			if (last == null)
-				last = finish;
-			if (last.compareTo(finish) < 0)
-				last = finish;
-		}
-		System.out.println("first: " + sdf.format(first));
-		System.out.println("last: " + sdf.format(last));
-	}
-
 	public byte[] getBytes() {
 		return baos.toByteArray();
 	}
@@ -205,18 +207,16 @@ class GanttPrintEventListener implements PdfPageEvent {
 	}
 
 	public void printBorders(PdfWriter writer) {
-		PdfContentByte dcb = writer.getDirectContent();
-		dcb.saveState();
-
-		dcb.setLineWidth(1);
-		dcb.setColorStroke(Color.black);
+		PdfContentByte canvas = writer.getDirectContent();
+		canvas.saveState();
+		canvas.setLineWidth(1);
+		canvas.setColorStroke(Color.black);
 		Rectangle size = ganttPrint.size.rectangle;
-		dcb.rectangle(GanttPrint.BORDER_PADDING, GanttPrint.BORDER_PADDING,
+		canvas.rectangle(GanttPrint.BORDER_PADDING, GanttPrint.BORDER_PADDING,
 				size.getWidth() - GanttPrint.BORDER_PADDING * 2,
 				size.getHeight() - GanttPrint.BORDER_PADDING * 2);
-		dcb.stroke();
-
-		dcb.restoreState();
+		canvas.stroke();
+		canvas.restoreState();
 	}
 
 	@Override
@@ -269,6 +269,33 @@ class GanttPrintEventListener implements PdfPageEvent {
 	@Override
 	public void onGenericTag(PdfWriter writer, Document document,
 			Rectangle rect, String text) {
+	}
+
+}
+
+class GanttPrintPdfPCellEvent implements PdfPCellEvent {
+
+	private final ScheduleItem scheduleItem;
+
+	public GanttPrintPdfPCellEvent(ScheduleItem si) {
+		this.scheduleItem = si;
+	}
+
+	@Override
+	public void cellLayout(PdfPCell cell, Rectangle position,
+			PdfContentByte[] canvases) {
+		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
+		canvas.saveState();
+		canvas.setLineWidth(0.5f);
+		canvas.setColorStroke(Color.blue);
+		canvas.setColorFill(Color.decode("0xaaaaff"));
+		float x = position.getLeft() + 2;
+		float w = position.getWidth() - 40;
+		float y = position.getBottom() + position.getHeight() / 3;
+		float h = position.getHeight() / 3;
+		canvas.rectangle(x, y, w, h);
+		canvas.fillStroke();
+		canvas.restoreState();
 	}
 
 }
