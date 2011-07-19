@@ -59,6 +59,7 @@ public class GanttPrint {
 	private float dataWidth = 0;
 	float barWidth = 0;
 	Date first = null, last = null;
+	private long range;
 
 	public GanttPrint(Schedule s) {
 		this(s, SIZE.A2);
@@ -111,8 +112,12 @@ public class GanttPrint {
 			if (last.compareTo(finish) < 0)
 				last = finish;
 		}
-		System.out.println("first: " + sdf.format(first));
-		System.out.println("last: " + sdf.format(last));
+		logger.debug("first: {}", sdf.format(first));
+		logger.debug("last: {}", sdf.format(last));
+		range = last.getTime() - first.getTime();
+		if (range <= 0)
+			throw new IllegalStateException("first start date [" + first
+					+ "] is after last finish date [" + last + "]");
 	}
 
 	private void printScheduleData() throws DocumentException {
@@ -191,6 +196,16 @@ public class GanttPrint {
 		cell.setBorderColor(Color.gray);
 		cell.setNoWrap(true);
 		return cell;
+	}
+
+	float getX(Date d) {
+		long l = d.getTime();
+		float x = (l - first.getTime()) * getScalingFactor();
+		return x;
+	}
+
+	private float getScalingFactor() {
+		return barWidth == 0 ? 1 : (barWidth / range);
 	}
 
 	public byte[] getBytes() {
@@ -277,32 +292,22 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 
 	private final ScheduleItem scheduleItem;
 	private final GanttPrint ganttPrint;
-	private final long first, last, range;
-	private float factor;
 
 	public GanttPrintPdfPCellEvent(GanttPrint ganttPrint, ScheduleItem si) {
 		this.ganttPrint = ganttPrint;
 		this.scheduleItem = si;
-
-		last = ganttPrint.last.getTime();
-		first = ganttPrint.first.getTime();
-		range = last - first;
-		factor = range / ganttPrint.barWidth;
 	}
 
 	@Override
 	public void cellLayout(PdfPCell cell, Rectangle position,
 			PdfContentByte[] canvases) {
 
-		long start = scheduleItem.getStart().getTime();
-		long finish = scheduleItem.getFinish().getTime();
+		float barStart = ganttPrint.getX(scheduleItem.getStart());
+		float barFinish = ganttPrint.getX(scheduleItem.getFinish());
+		float barWidth = barFinish - barStart;
 
-		float offset = (start - first) * factor;
-		float length = (finish - first) * factor;
-		
-
-		float x = position.getLeft() + 2 + offset;
-		float w = length;
+		float x = position.getLeft() + barStart;
+		float w = barWidth;
 		float y = position.getBottom() + position.getHeight() / 3;
 		float h = position.getHeight() / 3;
 
@@ -322,4 +327,5 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		canvas.fillStroke();
 		canvas.restoreState();
 	}
+
 }
