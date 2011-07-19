@@ -98,11 +98,21 @@ public class GanttPrint {
 
 		logger.debug("printing schedule ");
 
-		table = new PdfPTable(5);
+		float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
+		float dataWidth = 0;
+		for (float f : dataWidths)
+			dataWidth += f;
+		float[] totalWidths = new float[dataWidths.length + 1];
+		for (int i = 0; i < dataWidths.length; i++)
+			totalWidths[i] = dataWidths[i];
+		float remainder = size.rectangle.getWidth() - dataWidth
+				- BORDER_PADDING * 2 - 2;
+		totalWidths[totalWidths.length - 1] = remainder;
+		table = new PdfPTable(totalWidths.length);
 		table.setHorizontalAlignment(PdfPTable.ALIGN_LEFT);
-		table.setTotalWidth(TABLE_WIDTH);
+		table.setTotalWidth(totalWidths);
 		table.setLockedWidth(true);
-		table.setWidths(new int[] { 9, 5, 35, 15, 15 });
+		// table.setWidths(new int[] { 9, 5, 35, 15, 15 });
 
 		/* set header rows */
 		table.addCell(newHeaderCell("Work Order"));
@@ -110,6 +120,7 @@ public class GanttPrint {
 		table.addCell(newHeaderCell("Description"));
 		table.addCell(newHeaderCell("Start"));
 		table.addCell(newHeaderCell("Finish"));
+		table.addCell(newCell(/* empty */));
 		table.setHeaderRows(1);
 
 		logger.debug("schedule contains [{}] items", schedule.size());
@@ -125,6 +136,7 @@ public class GanttPrint {
 			if (finish == null)
 				finish = "null";
 			table.addCell(newDataCell(finish));
+			table.addCell(newCell(/* empty */));
 		}
 		table.setComplete(true);
 		document.add(table);
