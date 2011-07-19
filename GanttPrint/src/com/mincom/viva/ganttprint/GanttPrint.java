@@ -57,7 +57,7 @@ public class GanttPrint {
 
 	private PdfPTable table;
 	private float dataWidth = 0;
-	private float remainder = 0;
+	float barWidth = 0;
 	Date first = null, last = null;
 
 	public GanttPrint(Schedule s) {
@@ -125,9 +125,9 @@ public class GanttPrint {
 		float[] totalWidths = new float[dataWidths.length + 1];
 		for (int i = 0; i < dataWidths.length; i++)
 			totalWidths[i] = dataWidths[i];
-		remainder = size.rectangle.getWidth() - dataWidth - BORDER_PADDING * 2
+		barWidth = size.rectangle.getWidth() - dataWidth - BORDER_PADDING * 2
 				- 2;
-		totalWidths[totalWidths.length - 1] = remainder;
+		totalWidths[totalWidths.length - 1] = barWidth;
 		table = new PdfPTable(totalWidths.length);
 		table.setHorizontalAlignment(PdfPTable.ALIGN_LEFT);
 		table.setTotalWidth(totalWidths);
@@ -156,7 +156,7 @@ public class GanttPrint {
 				finish = "null";
 			table.addCell(newDataCell(finish));
 			PdfPCell cell = newCell(/* empty */);
-			cell.setCellEvent(new GanttPrintPdfPCellEvent(si));
+			cell.setCellEvent(new GanttPrintPdfPCellEvent(this, si));
 			table.addCell(cell);
 		}
 		table.setComplete(true);
@@ -276,17 +276,33 @@ class GanttPrintEventListener implements PdfPageEvent {
 class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 
 	private final ScheduleItem scheduleItem;
+	private final GanttPrint ganttPrint;
+	private final long first, last, range;
+	private float factor;
 
-	public GanttPrintPdfPCellEvent(ScheduleItem si) {
+	public GanttPrintPdfPCellEvent(GanttPrint ganttPrint, ScheduleItem si) {
+		this.ganttPrint = ganttPrint;
 		this.scheduleItem = si;
+
+		last = ganttPrint.last.getTime();
+		first = ganttPrint.first.getTime();
+		range = last - first;
+		factor = range / ganttPrint.barWidth;
 	}
 
 	@Override
 	public void cellLayout(PdfPCell cell, Rectangle position,
 			PdfContentByte[] canvases) {
 
-		float x = position.getLeft() + 2;
-		float w = position.getWidth() - 40;
+		long start = scheduleItem.getStart().getTime();
+		long finish = scheduleItem.getFinish().getTime();
+
+		float offset = (start - first) * factor;
+		float length = (finish - first) * factor;
+		
+
+		float x = position.getLeft() + 2 + offset;
+		float w = length;
 		float y = position.getBottom() + position.getHeight() / 3;
 		float h = position.getHeight() / 3;
 
@@ -306,5 +322,4 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		canvas.fillStroke();
 		canvas.restoreState();
 	}
-
 }
