@@ -209,7 +209,7 @@ class GanttPrintEventListener implements PdfPageEvent {
 	public void printBorders(PdfWriter writer) {
 		PdfContentByte canvas = writer.getDirectContent();
 		canvas.saveState();
-		canvas.setLineWidth(1);
+		canvas.setLineWidth(0.5f);
 		canvas.setColorStroke(Color.black);
 		Rectangle size = ganttPrint.size.rectangle;
 		canvas.rectangle(GanttPrint.BORDER_PADDING, GanttPrint.BORDER_PADDING,
@@ -284,16 +284,25 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 	@Override
 	public void cellLayout(PdfPCell cell, Rectangle position,
 			PdfContentByte[] canvases) {
-		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
-		canvas.saveState();
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.blue);
-		canvas.setColorFill(Color.decode("0xaaaaff"));
+
 		float x = position.getLeft() + 2;
 		float w = position.getWidth() - 40;
 		float y = position.getBottom() + position.getHeight() / 3;
 		float h = position.getHeight() / 3;
-		canvas.rectangle(x, y, w, h);
+
+		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
+		canvas.saveState();
+		/* shadow */
+		canvas.setLineWidth(0.5f);
+		canvas.setColorStroke(Color.gray);
+		canvas.setColorFill(Color.gray);
+		canvas.roundRectangle(x + 2, y - 1, w, h, 1);
+		canvas.fillStroke();
+		/* bar */
+		canvas.setLineWidth(0.5f);
+		canvas.setColorStroke(Color.blue);
+		canvas.setColorFill(Color.decode("0xaaaaff"));
+		canvas.roundRectangle(x, y, w, h, 1);
 		canvas.fillStroke();
 		canvas.restoreState();
 	}
