@@ -58,7 +58,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 		si.setDescription("work order description has 40 characters");
 		DateTime start = new DateTime().plusDays(i);
 		si.setStart(start.toDate());
-		DateTime finish = new DateTime(start).plusHours(8);
+		DateTime finish = new DateTime(start).plusDays(4);
 		si.setFinish(finish.toDate());
 		return si;
 	}

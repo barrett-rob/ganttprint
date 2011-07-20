@@ -73,7 +73,7 @@ public class GanttPrint {
 		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
 
-	Date first = null, last = null;
+	DateTime first = null, last = null;
 	private long range;
 
 	public GanttPrint(Schedule s) {
@@ -121,47 +121,47 @@ public class GanttPrint {
 
 	private void establishDateRange() {
 		for (ScheduleItem si : schedule) {
-			Date start = si.getStart();
+			DateTime start = new DateTime(si.getStart());
 			if (first == null)
+				first = new DateTime(start);
+			if (start.isBefore(first))
 				first = start;
-			if (first.compareTo(start) > 0)
-				first = start;
-			Date finish = si.getFinish();
+			DateTime finish = new DateTime(si.getFinish());
 			if (last == null)
-				last = finish;
-			if (last.compareTo(finish) < 0)
+				last = new DateTime(finish);
+			if (finish.isAfter(last))
 				last = finish;
 		}
-		logger.debug("first: {}", sdf.format(first));
-		logger.debug("last: {}", sdf.format(last));
-		if (first.after(last))
+		logger.debug("first: {}", first);
+		logger.debug("last: {}", last);
+		if (first.isAfter(last))
 			throw new IllegalStateException("first start date [" + first
 					+ "] is after last finish date [" + last + "]");
 		padDateRange();
 	}
 
 	private void padDateRange() {
-		DateTime dtfirst = new DateTime(first);
-		DateTime dtlast = new DateTime(last);
+		DateTime f = first;
+		DateTime l = last;
 
 		/* pad out to week boundaries */
-		dtfirst = dtfirst.withDayOfWeek(1).withMillisOfDay(0);
-		dtlast = dtlast.withDayOfWeek(1).minusDays(1).plusWeeks(1);
+		f = f.withDayOfWeek(1).withMillisOfDay(0);
+		l = l.withDayOfWeek(1).minusDays(1).plusWeeks(1);
 
 		/* if close to week boundaries pad out by another week */
-		if (new Interval(dtfirst.getMillis(), first.getTime()).toDuration()
+		if (new Interval(f.getMillis(), first.getMillis()).toDuration()
 				.isShorterThan(Duration.standardDays(2))) {
-			dtfirst.minusWeeks(1);
+			f = f.minusWeeks(1);
 		}
-		if (new Interval(last.getTime(), dtlast.getMillis()).toDuration()
+		if (new Interval(last.getMillis(), l.getMillis()).toDuration()
 				.isShorterThan(Duration.standardDays(2))) {
-			dtlast.plusWeeks(1);
+			l = l.plusWeeks(1);
 		}
 
 		/* set state */
-		first = dtfirst.toDate();
-		last = dtlast.toDate();
-		range = last.getTime() - first.getTime();
+		first = f;
+		last = l;
+		range = last.getMillis() - first.getMillis();
 	}
 
 	private void printScheduleData() throws DocumentException {
@@ -232,7 +232,7 @@ public class GanttPrint {
 
 	float getX(Date d) {
 		long l = d.getTime();
-		float x = (l - first.getTime()) * getScalingFactor();
+		float x = (l - first.getMillis()) * getScalingFactor();
 		return x;
 	}
 
@@ -253,9 +253,19 @@ class GanttPrintEventListener implements PdfPageEvent {
 		this.ganttPrint = ganttPrint;
 	}
 
-	public void printBorders(PdfWriter writer) {
+	@Override
+	public void onOpenDocument(PdfWriter writer, Document document) {
+	}
+
+	@Override
+	public void onStartPage(PdfWriter writer, Document document) {
 		PdfContentByte canvas = writer.getDirectContent();
 		canvas.saveState();
+		printBorders(canvas);
+		canvas.restoreState();
+	}
+
+	private void printBorders(PdfContentByte canvas) {
 		canvas.setLineWidth(0.5f);
 		canvas.setColorStroke(Color.black);
 		Rectangle size = ganttPrint.size.rectangle;
@@ -263,20 +273,23 @@ class GanttPrintEventListener implements PdfPageEvent {
 				size.getWidth() - GanttPrint.BORDER_PADDING * 2,
 				size.getHeight() - GanttPrint.BORDER_PADDING * 2);
 		canvas.stroke();
-		canvas.restoreState();
-	}
-
-	@Override
-	public void onOpenDocument(PdfWriter writer, Document document) {
-	}
-
-	@Override
-	public void onStartPage(PdfWriter writer, Document document) {
-		printBorders(writer);
 	}
 
 	@Override
 	public void onEndPage(PdfWriter writer, Document document) {
+		PdfContentByte canvas = writer.getDirectContent();
+		canvas.saveState();
+		printScaleLines(canvas);
+		canvas.restoreState();
+	}
+
+	private void printScaleLines(PdfContentByte canvas) {
+		if (ganttPrint.first == null || ganttPrint.last == null)
+			return;
+		DateTime dt = new DateTime(ganttPrint.first);
+		while (dt.isBefore(ganttPrint.last)) {
+			dt = dt.plus(Duration.standardDays(1));
+		}
 	}
 
 	@Override
