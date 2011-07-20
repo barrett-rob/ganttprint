@@ -8,6 +8,8 @@ import java.util.TimeZone;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
@@ -67,7 +69,7 @@ public class GanttPrint {
 	final SIZE size;
 
 	private final SimpleDateFormat sdf = new SimpleDateFormat(
-			"yyyy/MM/dd HH:mm");
+			"dd/MM/yyyy HH:mm");
 	{
 		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
@@ -108,6 +110,7 @@ public class GanttPrint {
 			} else {
 				establishDateRange();
 				printScheduleData();
+				printSummary();
 			}
 			document.close();
 			baos.flush();
@@ -240,6 +243,21 @@ public class GanttPrint {
 		return barWidth == 0 ? 1 : (barWidth / range);
 	}
 
+	private void printSummary() throws DocumentException {
+		DateTimeFormatter dtf = DateTimeFormat.mediumDateTime();
+		document.newPage();
+		Paragraph p = new Paragraph("printed " + schedule.size()
+				+ " schedule items, ranging between " + first.toString(dtf)
+				+ " and " + last.toString(dtf));
+		p.setAlignment(Paragraph.ALIGN_CENTER);
+		p.setLeading(20);
+		document.add(p);
+		p = new Paragraph("printed at " + new DateTime().toString(dtf));
+		p.setAlignment(Paragraph.ALIGN_CENTER);
+		p.setLeading(20);
+		document.add(p);
+	}
+
 	public byte[] getBytes() {
 		return baos.toByteArray();
 	}
@@ -341,16 +359,21 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 	}
 
 	private void paintScaleLines(PdfContentByte canvas, Rectangle position) {
-		DateTime dt = new DateTime(ganttPrint.first);
-		while (dt.isBefore(ganttPrint.last)) {
-			dt = dt.plus(Duration.standardDays(1));
-			float x = ganttPrint.getX(dt.getMillis());
-			paintDay(canvas, position, x);
-			int dayOfWeek = dt.getDayOfWeek();
-			if (dayOfWeek == 6) { // saturday
-				DateTime dt2 = dt.plusDays(2).withMillisOfDay(0).minusMinutes(1); // sunday night
-				float x2 = ganttPrint.getX(dt2.getMillis());
-				paintWeekend(canvas, position, x, x2);
+		DateTime d0 = new DateTime(ganttPrint.first);
+		d0.withMillisOfDay(0);
+		while (d0.isBefore(ganttPrint.last)) {
+			d0 = d0.plus(Duration.standardDays(1));
+			DateTime d0end = d0.plusDays(1).minusSeconds(1);
+			float x0 = ganttPrint.getX(d0.getMillis());
+			float w0 = ganttPrint.getX(d0end.getMillis()) - x0;
+			paintDay(canvas, position, x0);
+			int dayOfWeek = d0.getDayOfWeek();
+			if (dayOfWeek == 6) {
+				/* saturday */
+				DateTime d1 = d0.plusDays(1);
+				float x1 = ganttPrint.getX(d1.getMillis());
+				paintWeekend(canvas, position, x0, w0);
+				paintWeekend(canvas, position, x1, w0);
 			}
 		}
 	}
@@ -364,11 +387,11 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		canvas.stroke();
 	}
 
-	private void paintWeekend(PdfContentByte canvas, Rectangle position, float f, float f2) {
+	private void paintWeekend(PdfContentByte canvas, Rectangle position,
+			float f, float w) {
 		canvas.setColorFill(Color.lightGray);
 		float x = position.getLeft() + f;
 		float y = position.getBottom();
-		float w = (position.getLeft() + f2) - x;
 		float h = position.getHeight();
 		canvas.rectangle(x, y, w, h);
 		canvas.fill();

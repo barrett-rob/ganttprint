@@ -72,19 +72,28 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 		assertions(bs);
 	}
 
-	// public void testMany() throws IOException {
-	// Schedule s = buildScheduleFromDatabase();
-	// GanttPrint gp = new GanttPrint(s);
-	// byte[] bs = gp.getBytes();
-	// assertions(bs);
-	// }
+	public void testMany() throws IOException {
+		Schedule s = new Schedule();
+		for (int i = 0; i < 1000; i++)
+			s.add(newScheduleItem(i));
+		GanttPrint gp = new GanttPrint(s);
+		byte[] bs = gp.getBytes();
+		assertions(bs);
+	}
+
+//	public void testMany() throws IOException {
+//		Schedule s = buildScheduleFromDatabase();
+//		GanttPrint gp = new GanttPrint(s);
+//		byte[] bs = gp.getBytes();
+//		assertions(bs);
+//	}
 
 	private Schedule buildScheduleFromDatabase() {
 		Schedule s = new Schedule();
 
 		@SuppressWarnings({ "deprecation" })
 		List<ScheduleItem> scheduleItems = simpleJdbcTemplate
-				.query("SELECT * FROM MSF623 WHERE PLAN_STR_DATE != ' ' AND PLAN_FIN_DATE != ' '",
+				.query("SELECT * FROM MSF623 WHERE PLAN_STR_DATE != ' ' AND PLAN_FIN_DATE != ' ' AND ROWNUM < 5001",
 						new ParameterizedRowMapper<ScheduleItem>() {
 
 							@Override
@@ -127,11 +136,11 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 
 							private Date parseDateTime(Date date,
 									String timeString) {
-								Date time = null;
+								Date time = new Date(0);
 								try {
 									time = tf.parse(timeString);
 								} catch (ParseException e) {
-									throw new RuntimeException(e);
+									// squash
 								}
 								return new Date(date.getTime() + time.getTime());
 							}
