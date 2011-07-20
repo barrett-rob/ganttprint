@@ -147,8 +147,8 @@ public class GanttPrint {
 		DateTime l = last;
 
 		/* pad out to week boundaries */
-		f = f.withDayOfWeek(1).withMillisOfDay(0);
-		l = l.withDayOfWeek(1).minusDays(1).plusWeeks(1);
+		f = f.withMillisOfDay(0).withDayOfWeek(1);
+		l = l.withMillisOfDay(0).withDayOfWeek(1).plusWeeks(1).minusSeconds(1);
 
 		/* if close to week boundaries pad out by another week */
 		if (new Interval(f.getMillis(), first.getMillis()).toDuration()
