@@ -12,8 +12,9 @@ import com.lowagie.text.pdf.PdfContentByte;
 
 class HeaderPdfPCellEventImpl extends PdfPCellEventImpl {
 
-	private static final int LEFT_PADDING = 5;
+	private static final int LEFT_PADDING = 3;
 	private static final BaseFont SCALE_FONT;
+	private static final int SCALE_FONT_SIZE = 7;
 
 	private final DateTimeFormatter dailyFormatter = DateTimeFormat
 			.forPattern("EEE d MMM");
@@ -64,7 +65,7 @@ class HeaderPdfPCellEventImpl extends PdfPCellEventImpl {
 	private void writeDateHeader(PdfContentByte canvas, Rectangle position,
 			float f, DateTime dt, DateTimeFormatter dtf) {
 		canvas.setColorFill(Color.black);
-		canvas.setFontAndSize(SCALE_FONT, 8);
+		canvas.setFontAndSize(SCALE_FONT, SCALE_FONT_SIZE);
 		float x = position.getLeft() + f + LEFT_PADDING;
 		float y = position.getBottom() + position.getHeight() / 3;
 		canvas.showTextAligned(PdfContentByte.ALIGN_LEFT, dt.toString(dtf), x,

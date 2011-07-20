@@ -28,7 +28,7 @@ public class GanttPrint {
 			.getLogger(GanttPrint.class);
 
 	static final Font DATA_FONT = new Font(Font.HELVETICA, 9);
-	static final Font HEADER_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
+	static final Font HEADER_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
 	static final int TABLE_WIDTH = 500;
 	static final int ROW_HEIGHT = 19;
 	static final int BORDER_PADDING = 5;
@@ -44,7 +44,7 @@ public class GanttPrint {
 		}
 	}
 
-	private final float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
+	private final float[] dataWidths = new float[] { 60, 30, 220, 90, 90 };
 	final float dataWidth;
 	{
 		int dw = 0;
@@ -193,9 +193,7 @@ public class GanttPrint {
 		table.addCell(newHeaderCell("Description"));
 		table.addCell(newHeaderCell("Start"));
 		table.addCell(newHeaderCell("Finish"));
-		PdfPCell hc = newCell(/* empty */);
-		hc.setCellEvent(new HeaderPdfPCellEventImpl(this));
-		table.addCell(hc);
+		table.addCell(newBarHeaderCell());
 		table.setHeaderRows(1);
 
 		logger.debug("schedule contains [{}] items", schedule.size());
@@ -212,13 +210,27 @@ public class GanttPrint {
 			if (finish == null)
 				finish = "null";
 			table.addCell(newDataCell(finish));
-			PdfPCell c = newCell();
-			c.setCellEvent(new PdfPCellEventImpl(this, si));
-			table.addCell(c);
+			table.addCell(newBarCell(si));
 		}
 
 		table.setComplete(true);
 		document.add(table);
+	}
+
+	private PdfPCell newBarCell(ScheduleItem si) {
+		PdfPCell cell = newCell(/* empty */);
+		cell.setBorderColorLeft(Color.black);
+		cell.setBorderWidthLeft(1);
+		cell.setCellEvent(new PdfPCellEventImpl(this, si));
+		return cell;
+	}
+
+	private PdfPCell newBarHeaderCell() {
+		PdfPCell cell = newCell(/* empty */);
+		cell.setBorderColorLeft(Color.black);
+		cell.setBorderWidthLeft(1);
+		cell.setCellEvent(new HeaderPdfPCellEventImpl(this));
+		return cell;
 	}
 
 	private PdfPCell newHeaderCell(String content) {
@@ -279,4 +291,3 @@ public class GanttPrint {
 		return baos.toByteArray();
 	}
 }
-

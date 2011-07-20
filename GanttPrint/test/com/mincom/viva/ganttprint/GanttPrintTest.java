@@ -38,7 +38,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 
 	public void testEmpty() throws IOException {
 		Schedule s = new Schedule();
-		GanttPrint gp = new GanttPrint(s);
+		GanttPrint gp = new GanttPrint(s, GanttPrint.SIZE.A3);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
 	}
@@ -46,7 +46,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 	public void testOne() throws IOException {
 		Schedule s = new Schedule();
 		s.add(newScheduleItem(0));
-		GanttPrint gp = new GanttPrint(s);
+		GanttPrint gp = new GanttPrint(s, GanttPrint.SIZE.A3);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
 	}
@@ -67,7 +67,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 		Schedule s = new Schedule();
 		for (int i = 0; i < 100; i++)
 			s.add(newScheduleItem(i));
-		GanttPrint gp = new GanttPrint(s);
+		GanttPrint gp = new GanttPrint(s, GanttPrint.SIZE.A3);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
 	}
@@ -76,7 +76,7 @@ public class GanttPrintTest extends AbstractJUnit38SpringContextTests {
 		Schedule s = new Schedule();
 		for (int i = 0; i < 1000; i++)
 			s.add(newScheduleItem(i));
-		GanttPrint gp = new GanttPrint(s);
+		GanttPrint gp = new GanttPrint(s, GanttPrint.SIZE.A3);
 		byte[] bs = gp.getBytes();
 		assertions(bs);
 	}
