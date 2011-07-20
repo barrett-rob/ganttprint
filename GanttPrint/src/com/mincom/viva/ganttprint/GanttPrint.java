@@ -344,16 +344,34 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		DateTime dt = new DateTime(ganttPrint.first);
 		while (dt.isBefore(ganttPrint.last)) {
 			dt = dt.plus(Duration.standardDays(1));
-			paintScaleLine(canvas, position, ganttPrint.getX(dt.getMillis()));
+			float x = ganttPrint.getX(dt.getMillis());
+			paintDay(canvas, position, x);
+			int dayOfWeek = dt.getDayOfWeek();
+			if (dayOfWeek == 6) { // saturday
+				DateTime dt2 = dt.plusDays(2).withMillisOfDay(0).minusMinutes(1); // sunday night
+				float x2 = ganttPrint.getX(dt2.getMillis());
+				paintWeekend(canvas, position, x, x2);
+			}
 		}
 	}
 
-	private void paintScaleLine(PdfContentByte canvas, Rectangle position, float f) {
+	private void paintDay(PdfContentByte canvas, Rectangle position, float f) {
 		canvas.setLineWidth(0.1f);
 		canvas.setColorStroke(Color.black);
-		canvas.moveTo(position.getLeft() + f, position.getBottom());
-		canvas.lineTo(position.getLeft() + f, position.getTop());
+		float x = position.getLeft() + f;
+		canvas.moveTo(x, position.getBottom());
+		canvas.lineTo(x, position.getTop());
 		canvas.stroke();
+	}
+
+	private void paintWeekend(PdfContentByte canvas, Rectangle position, float f, float f2) {
+		canvas.setColorFill(Color.lightGray);
+		float x = position.getLeft() + f;
+		float y = position.getBottom();
+		float w = (position.getLeft() + f2) - x;
+		float h = position.getHeight();
+		canvas.rectangle(x, y, w, h);
+		canvas.fill();
 	}
 
 	private void paintBar(PdfContentByte canvas, Rectangle position) {
@@ -362,9 +380,15 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		float barWidth = barFinish - barStart;
 
 		float x = position.getLeft() + barStart;
-		float w = barWidth;
 		float y = position.getBottom() + position.getHeight() / 3;
+		float w = barWidth;
 		float h = position.getHeight() / 3;
+
+		paintBar(canvas, x, w, y, h);
+	}
+
+	private void paintBar(PdfContentByte canvas, float x, float w, float y,
+			float h) {
 
 		/* shadow */
 		canvas.setLineWidth(0.5f);
@@ -372,6 +396,7 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		canvas.setColorFill(Color.gray);
 		canvas.roundRectangle(x + 2, y - 1, w, h, 1);
 		canvas.fillStroke();
+
 		/* bar */
 		canvas.setLineWidth(0.5f);
 		canvas.setColorStroke(Color.blue);
