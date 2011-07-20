@@ -407,9 +407,26 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 	private void paintDay(PdfContentByte canvas, Rectangle position, float f) {
 		if (ganttPrint.scaleLevel != SCALE_LEVEL.DAILY)
 			return;
-		canvas.setLineWidth(0.2f);
+		paintVerticalLine(canvas, position, f, 0.2f);
+	}
+
+	private void paintWeek(PdfContentByte canvas, Rectangle position, float f) {
+		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
+			return;
+		paintVerticalLine(canvas, position, f, 0.5f);
+	}
+
+	private void paintMonth(PdfContentByte canvas, Rectangle position, float f) {
+		if (ganttPrint.scaleLevel != SCALE_LEVEL.MONTHLY)
+			return;
+		paintVerticalLine(canvas, position, f, 0.5f);
+	}
+
+	private void paintVerticalLine(PdfContentByte canvas, Rectangle position,
+			float offset, float w) {
+		canvas.setLineWidth(w);
 		canvas.setColorStroke(Color.black);
-		float x = position.getLeft() + f;
+		float x = position.getLeft() + offset;
 		canvas.moveTo(x, position.getBottom());
 		canvas.lineTo(x, position.getTop());
 		canvas.stroke();
@@ -425,28 +442,6 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		float h = position.getHeight();
 		canvas.rectangle(x, y, w, h);
 		canvas.fill();
-	}
-
-	private void paintWeek(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
-			return;
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.black);
-		float x = position.getLeft() + f;
-		canvas.moveTo(x, position.getBottom());
-		canvas.lineTo(x, position.getTop());
-		canvas.stroke();
-	}
-
-	private void paintMonth(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel != SCALE_LEVEL.MONTHLY)
-			return;
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.black);
-		float x = position.getLeft() + f;
-		canvas.moveTo(x, position.getBottom());
-		canvas.lineTo(x, position.getTop());
-		canvas.stroke();
 	}
 
 	private void paintBar(PdfContentByte canvas, Rectangle position) {
