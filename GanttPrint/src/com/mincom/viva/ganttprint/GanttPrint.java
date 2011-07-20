@@ -18,13 +18,9 @@ import com.lowagie.text.Font;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Rectangle;
-import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPCellEvent;
 import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfPageEvent;
 import com.lowagie.text.pdf.PdfWriter;
-import com.mincom.viva.ganttprint.GanttPrint.SCALE_LEVEL;
 
 public class GanttPrint {
 
@@ -105,7 +101,7 @@ public class GanttPrint {
 			pdfWriter = PdfWriter.getInstance(document = new Document(
 					this.size.rectangle),
 					this.baos = new ByteArrayOutputStream());
-			pdfWriter.setPageEvent(new GanttPrintEventListener(this));
+			pdfWriter.setPageEvent(new PdfPageEventImpl(this));
 			document.addAuthor("Mincom Ltd");
 			document.addTitle("Gantt Chart Print");
 			document.setMargins(BORDER_PADDING + 1, BORDER_PADDING + 1,
@@ -198,7 +194,7 @@ public class GanttPrint {
 		table.addCell(newHeaderCell("Start"));
 		table.addCell(newHeaderCell("Finish"));
 		PdfPCell hc = newCell(/* empty */);
-		hc.setCellEvent(new GanttPrintHeaderPdfPCellEvent(this));
+		hc.setCellEvent(new HeaderPdfPCellEventImpl(this));
 		table.addCell(hc);
 		table.setHeaderRows(1);
 
@@ -217,7 +213,7 @@ public class GanttPrint {
 				finish = "null";
 			table.addCell(newDataCell(finish));
 			PdfPCell c = newCell();
-			c.setCellEvent(new GanttPrintPdfPCellEvent(this, si));
+			c.setCellEvent(new PdfPCellEventImpl(this, si));
 			table.addCell(c);
 		}
 
@@ -284,212 +280,3 @@ public class GanttPrint {
 	}
 }
 
-class GanttPrintEventListener implements PdfPageEvent {
-
-	private final GanttPrint ganttPrint;
-
-	public GanttPrintEventListener(GanttPrint ganttPrint) {
-		this.ganttPrint = ganttPrint;
-	}
-
-	@Override
-	public void onOpenDocument(PdfWriter writer, Document document) {
-	}
-
-	@Override
-	public void onStartPage(PdfWriter writer, Document document) {
-		PdfContentByte canvas = writer.getDirectContent();
-		canvas.saveState();
-		printBorders(canvas);
-		canvas.restoreState();
-	}
-
-	private void printBorders(PdfContentByte canvas) {
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.black);
-		Rectangle size = ganttPrint.size.rectangle;
-		canvas.rectangle(GanttPrint.BORDER_PADDING, GanttPrint.BORDER_PADDING,
-				size.getWidth() - GanttPrint.BORDER_PADDING * 2,
-				size.getHeight() - GanttPrint.BORDER_PADDING * 2);
-		canvas.stroke();
-	}
-
-	@Override
-	public void onEndPage(PdfWriter writer, Document document) {
-	}
-
-	@Override
-	public void onCloseDocument(PdfWriter writer, Document document) {
-	}
-
-	@Override
-	public void onParagraph(PdfWriter writer, Document document,
-			float paragraphPosition) {
-	}
-
-	@Override
-	public void onParagraphEnd(PdfWriter writer, Document document,
-			float paragraphPosition) {
-	}
-
-	@Override
-	public void onChapter(PdfWriter writer, Document document,
-			float paragraphPosition, Paragraph title) {
-	}
-
-	@Override
-	public void onChapterEnd(PdfWriter writer, Document document,
-			float paragraphPosition) {
-	}
-
-	@Override
-	public void onSection(PdfWriter writer, Document document,
-			float paragraphPosition, int depth, Paragraph title) {
-	}
-
-	@Override
-	public void onSectionEnd(PdfWriter writer, Document document,
-			float paragraphPosition) {
-	}
-
-	@Override
-	public void onGenericTag(PdfWriter writer, Document document,
-			Rectangle rect, String text) {
-	}
-
-}
-
-class GanttPrintHeaderPdfPCellEvent implements PdfPCellEvent {
-
-	private final GanttPrint ganttPrint;
-
-	public GanttPrintHeaderPdfPCellEvent(GanttPrint ganttPrint) {
-		this.ganttPrint = ganttPrint;
-	}
-
-	@Override
-	public void cellLayout(PdfPCell cell, Rectangle position,
-			PdfContentByte[] canvases) {
-		System.out.println("header cell event");
-	}
-}
-
-class GanttPrintPdfPCellEvent implements PdfPCellEvent {
-
-	private final ScheduleItem scheduleItem;
-	private final GanttPrint ganttPrint;
-
-	public GanttPrintPdfPCellEvent(GanttPrint ganttPrint, ScheduleItem si) {
-		this.ganttPrint = ganttPrint;
-		this.scheduleItem = si;
-	}
-
-	@Override
-	public void cellLayout(PdfPCell cell, Rectangle position,
-			PdfContentByte[] canvases) {
-		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
-		canvas.saveState();
-		paintScaleLines(canvas, position);
-		paintBar(canvas, position);
-		canvas.restoreState();
-	}
-
-	private void paintScaleLines(PdfContentByte canvas, Rectangle position) {
-		DateTime d0 = new DateTime(ganttPrint.first);
-		d0.withMillisOfDay(0);
-		while (d0.isBefore(ganttPrint.last)) {
-			d0 = d0.plus(Duration.standardDays(1));
-			DateTime d0end = d0.plusDays(1).minusSeconds(1);
-			float x0 = ganttPrint.getX(d0.getMillis());
-			float w0 = ganttPrint.getX(d0end.getMillis()) - x0;
-			paintDay(canvas, position, x0);
-			int dayOfWeek = d0.getDayOfWeek();
-			if (dayOfWeek == 6) {
-				/* saturday */
-				DateTime d1 = d0.plusDays(1);
-				float x1 = ganttPrint.getX(d1.getMillis());
-				paintWeekend(canvas, position, x0, w0);
-				paintWeekend(canvas, position, x1, w0);
-			}
-			if (dayOfWeek == 1) {
-				paintWeek(canvas, position, x0);
-			}
-			int dayOfMonth = d0.getDayOfMonth();
-			if (dayOfMonth == 1) {
-				paintMonth(canvas, position, x0);
-			}
-		}
-	}
-
-	private void paintDay(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel != SCALE_LEVEL.DAILY)
-			return;
-		paintVerticalLine(canvas, position, f, 0.2f);
-	}
-
-	private void paintWeek(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
-			return;
-		paintVerticalLine(canvas, position, f, 0.5f);
-	}
-
-	private void paintMonth(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel != SCALE_LEVEL.MONTHLY)
-			return;
-		paintVerticalLine(canvas, position, f, 0.5f);
-	}
-
-	private void paintVerticalLine(PdfContentByte canvas, Rectangle position,
-			float f, float w) {
-		canvas.setLineWidth(w);
-		canvas.setColorStroke(Color.black);
-		float x = position.getLeft() + f;
-		canvas.moveTo(x, position.getBottom());
-		canvas.lineTo(x, position.getTop());
-		canvas.stroke();
-	}
-
-	private void paintWeekend(PdfContentByte canvas, Rectangle position,
-			float f, float w) {
-		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
-			return;
-		canvas.setColorFill(Color.lightGray);
-		float x = position.getLeft() + f;
-		float y = position.getBottom();
-		float h = position.getHeight();
-		canvas.rectangle(x, y, w, h);
-		canvas.fill();
-	}
-
-	private void paintBar(PdfContentByte canvas, Rectangle position) {
-		float barStart = ganttPrint.getX(scheduleItem.getStart().getTime());
-		float barFinish = ganttPrint.getX(scheduleItem.getFinish().getTime());
-		float barWidth = barFinish - barStart;
-
-		float x = position.getLeft() + barStart;
-		float y = position.getBottom() + position.getHeight() / 3;
-		float w = barWidth;
-		float h = position.getHeight() / 3;
-
-		paintBar(canvas, x, w, y, h);
-	}
-
-	private void paintBar(PdfContentByte canvas, float x, float w, float y,
-			float h) {
-
-		/* shadow */
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.gray);
-		canvas.setColorFill(Color.gray);
-		canvas.roundRectangle(x + 2, y - 1, w, h, 1);
-		canvas.fillStroke();
-
-		/* bar */
-		canvas.setLineWidth(0.5f);
-		canvas.setColorStroke(Color.blue);
-		canvas.setColorFill(Color.decode("0xaaaaff"));
-		canvas.roundRectangle(x, y, w, h, 1);
-		canvas.fillStroke();
-	}
-
-}
