@@ -27,57 +27,58 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 			PdfContentByte[] canvases) {
 		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
 		canvas.saveState();
-		paintScaleLines(canvas, position);
+		paintScale(canvas, position);
 		paintBar(canvas, position);
 		canvas.restoreState();
 	}
 
-	protected void paintScaleLines(PdfContentByte canvas, Rectangle position) {
+	private void paintScale(PdfContentByte canvas, Rectangle position) {
 		DateTime d0 = new DateTime(ganttPrint.first);
 		d0.withMillisOfDay(0);
 		while (d0.isBefore(ganttPrint.last)) {
-			d0 = d0.plus(Duration.standardDays(1));
 			DateTime d0end = d0.plusDays(1).minusSeconds(1);
 			float x0 = ganttPrint.getX(d0.getMillis());
 			float w0 = ganttPrint.getX(d0end.getMillis()) - x0;
-			paintDay(canvas, position, x0);
+			if (ganttPrint.scaleLevel == SCALE_LEVEL.DAILY)
+				paintDay(canvas, position, x0, d0);
 			int dayOfWeek = d0.getDayOfWeek();
 			if (dayOfWeek == 6) {
 				/* saturday */
-				DateTime d1 = d0.plusDays(1);
-				float x1 = ganttPrint.getX(d1.getMillis());
-				paintWeekend(canvas, position, x0, w0);
-				paintWeekend(canvas, position, x1, w0);
+				if (ganttPrint.scaleLevel == SCALE_LEVEL.DAILY
+						|| ganttPrint.scaleLevel == SCALE_LEVEL.WEEKLY) {
+					DateTime d1 = d0.plusDays(1);
+					float x1 = ganttPrint.getX(d1.getMillis());
+					paintWeekend(canvas, position, x0, w0);
+					paintWeekend(canvas, position, x1, w0);
+				}
 			}
-			if (dayOfWeek == 1) {
-				paintWeek(canvas, position, x0);
-			}
+			if (dayOfWeek == 1)
+				if (ganttPrint.scaleLevel == SCALE_LEVEL.WEEKLY)
+					paintWeek(canvas, position, x0, d0);
 			int dayOfMonth = d0.getDayOfMonth();
-			if (dayOfMonth == 1) {
-				paintMonth(canvas, position, x0);
-			}
+			if (dayOfMonth == 1)
+				if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
+					paintMonth(canvas, position, x0, d0);
+			d0 = d0.plus(Duration.standardDays(1));
 		}
 	}
 
-	private void paintDay(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel != SCALE_LEVEL.DAILY)
-			return;
+	protected void paintDay(PdfContentByte canvas, Rectangle position, float f,
+			DateTime dt) {
 		paintVerticalLine(canvas, position, f, 0.2f);
 	}
 
-	private void paintWeek(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
-			return;
+	protected void paintWeek(PdfContentByte canvas, Rectangle position,
+			float f, DateTime dt) {
 		paintVerticalLine(canvas, position, f, 0.5f);
 	}
 
-	private void paintMonth(PdfContentByte canvas, Rectangle position, float f) {
-		if (ganttPrint.scaleLevel != SCALE_LEVEL.MONTHLY)
-			return;
+	protected void paintMonth(PdfContentByte canvas, Rectangle position,
+			float f, DateTime dt) {
 		paintVerticalLine(canvas, position, f, 0.5f);
 	}
 
-	private void paintVerticalLine(PdfContentByte canvas, Rectangle position,
+	protected void paintVerticalLine(PdfContentByte canvas, Rectangle position,
 			float f, float w) {
 		canvas.setLineWidth(w);
 		canvas.setColorStroke(Color.black);
@@ -87,10 +88,8 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 		canvas.stroke();
 	}
 
-	private void paintWeekend(PdfContentByte canvas, Rectangle position,
+	protected void paintWeekend(PdfContentByte canvas, Rectangle position,
 			float f, float w) {
-		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
-			return;
 		canvas.setColorFill(Color.lightGray);
 		float x = position.getLeft() + f;
 		float y = position.getBottom();
@@ -99,7 +98,7 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 		canvas.fill();
 	}
 
-	private void paintBar(PdfContentByte canvas, Rectangle position) {
+	protected void paintBar(PdfContentByte canvas, Rectangle position) {
 		float barStart = ganttPrint.getX(scheduleItem.getStart().getTime());
 		float barFinish = ganttPrint.getX(scheduleItem.getFinish().getTime());
 		float barWidth = barFinish - barStart;
