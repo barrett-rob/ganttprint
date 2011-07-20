@@ -197,7 +197,9 @@ public class GanttPrint {
 		table.addCell(newHeaderCell("Description"));
 		table.addCell(newHeaderCell("Start"));
 		table.addCell(newHeaderCell("Finish"));
-		table.addCell(newCell(/* empty */));
+		PdfPCell hc = newCell(/* empty */);
+		hc.setCellEvent(new GanttPrintHeaderPdfPCellEvent(this));
+		table.addCell(hc);
 		table.setHeaderRows(1);
 
 		logger.debug("schedule contains [{}] items", schedule.size());
@@ -214,9 +216,9 @@ public class GanttPrint {
 			if (finish == null)
 				finish = "null";
 			table.addCell(newDataCell(finish));
-			PdfPCell cell = newCell(/* empty */);
-			cell.setCellEvent(new GanttPrintPdfPCellEvent(this, si));
-			table.addCell(cell);
+			PdfPCell c = newCell();
+			c.setCellEvent(new GanttPrintPdfPCellEvent(this, si));
+			table.addCell(c);
 		}
 
 		table.setComplete(true);
@@ -357,6 +359,21 @@ class GanttPrintEventListener implements PdfPageEvent {
 
 }
 
+class GanttPrintHeaderPdfPCellEvent implements PdfPCellEvent {
+
+	private final GanttPrint ganttPrint;
+
+	public GanttPrintHeaderPdfPCellEvent(GanttPrint ganttPrint) {
+		this.ganttPrint = ganttPrint;
+	}
+
+	@Override
+	public void cellLayout(PdfPCell cell, Rectangle position,
+			PdfContentByte[] canvases) {
+		System.out.println("header cell event");
+	}
+}
+
 class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 
 	private final ScheduleItem scheduleItem;
@@ -423,10 +440,10 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 	}
 
 	private void paintVerticalLine(PdfContentByte canvas, Rectangle position,
-			float offset, float w) {
+			float f, float w) {
 		canvas.setLineWidth(w);
 		canvas.setColorStroke(Color.black);
-		float x = position.getLeft() + offset;
+		float x = position.getLeft() + f;
 		canvas.moveTo(x, position.getBottom());
 		canvas.lineTo(x, position.getTop());
 		canvas.stroke();
