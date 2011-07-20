@@ -6,7 +6,7 @@ public class ScheduleItem {
 
 	private String workOrder, taskNo, description;
 
-	private Date start, finish;
+	private Date start = new Date(0), finish = new Date(0);
 
 	public String getWorkOrder() {
 		return workOrder;
