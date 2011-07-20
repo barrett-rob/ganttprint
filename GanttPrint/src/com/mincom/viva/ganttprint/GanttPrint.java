@@ -46,7 +46,7 @@ public class GanttPrint {
 	}
 
 	private final float[] dataWidths = new float[] { 60, 30, 250, 100, 100 };
-	private final float dataWidth;
+	final float dataWidth;
 	{
 		int dw = 0;
 		for (int i = 0; i < dataWidths.length; dw += dataWidths[i++])
@@ -277,23 +277,6 @@ class GanttPrintEventListener implements PdfPageEvent {
 
 	@Override
 	public void onEndPage(PdfWriter writer, Document document) {
-		if (ganttPrint.first == null || ganttPrint.last == null)
-			return;
-		PdfContentByte canvas = writer.getDirectContent();
-		canvas.saveState();
-		paintScaleLines(canvas);
-		canvas.restoreState();
-	}
-
-	private void paintScaleLines(PdfContentByte canvas) {
-		DateTime dt = new DateTime(ganttPrint.first);
-		while (dt.isBefore(ganttPrint.last)) {
-			dt = dt.plus(Duration.standardDays(1));
-			paintScaleLine(canvas, ganttPrint.getX(dt.getMillis()));
-		}
-	}
-
-	private void paintScaleLine(PdfContentByte canvas, float f) {
 	}
 
 	@Override
@@ -350,7 +333,30 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 	@Override
 	public void cellLayout(PdfPCell cell, Rectangle position,
 			PdfContentByte[] canvases) {
+		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
+		canvas.saveState();
+		paintScaleLines(canvas, position);
+		paintBar(canvas, position);
+		canvas.restoreState();
+	}
 
+	private void paintScaleLines(PdfContentByte canvas, Rectangle position) {
+		DateTime dt = new DateTime(ganttPrint.first);
+		while (dt.isBefore(ganttPrint.last)) {
+			dt = dt.plus(Duration.standardDays(1));
+			paintScaleLine(canvas, position, ganttPrint.getX(dt.getMillis()));
+		}
+	}
+
+	private void paintScaleLine(PdfContentByte canvas, Rectangle position, float f) {
+		canvas.setLineWidth(0.1f);
+		canvas.setColorStroke(Color.black);
+		canvas.moveTo(position.getLeft() + f, position.getBottom());
+		canvas.lineTo(position.getLeft() + f, position.getTop());
+		canvas.stroke();
+	}
+
+	private void paintBar(PdfContentByte canvas, Rectangle position) {
 		float barStart = ganttPrint.getX(scheduleItem.getStart().getTime());
 		float barFinish = ganttPrint.getX(scheduleItem.getFinish().getTime());
 		float barWidth = barFinish - barStart;
@@ -360,8 +366,6 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		float y = position.getBottom() + position.getHeight() / 3;
 		float h = position.getHeight() / 3;
 
-		PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
-		canvas.saveState();
 		/* shadow */
 		canvas.setLineWidth(0.5f);
 		canvas.setColorStroke(Color.gray);
@@ -374,7 +378,6 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 		canvas.setColorFill(Color.decode("0xaaaaff"));
 		canvas.roundRectangle(x, y, w, h, 1);
 		canvas.fillStroke();
-		canvas.restoreState();
 	}
 
 }
