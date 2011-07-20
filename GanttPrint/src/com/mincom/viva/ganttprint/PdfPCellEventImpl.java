@@ -15,7 +15,7 @@ import com.mincom.viva.ganttprint.GanttPrint.SCALE_LEVEL;
 class PdfPCellEventImpl implements PdfPCellEvent {
 
 	private final ScheduleItem scheduleItem;
-	private final GanttPrint ganttPrint;
+	protected final GanttPrint ganttPrint;
 
 	public PdfPCellEventImpl(GanttPrint ganttPrint, ScheduleItem si) {
 		this.ganttPrint = ganttPrint;
@@ -32,7 +32,7 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 		canvas.restoreState();
 	}
 
-	private void paintScaleLines(PdfContentByte canvas, Rectangle position) {
+	protected void paintScaleLines(PdfContentByte canvas, Rectangle position) {
 		DateTime d0 = new DateTime(ganttPrint.first);
 		d0.withMillisOfDay(0);
 		while (d0.isBefore(ganttPrint.last)) {
