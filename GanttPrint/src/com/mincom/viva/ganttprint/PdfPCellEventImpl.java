@@ -39,11 +39,8 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 			DateTime d0end = d0.plusDays(1).minusSeconds(1);
 			float x0 = ganttPrint.getX(d0.getMillis());
 			float w0 = ganttPrint.getX(d0end.getMillis()) - x0;
-			if (ganttPrint.scaleLevel == SCALE_LEVEL.DAILY)
-				paintDay(canvas, position, x0, d0);
 			int dayOfWeek = d0.getDayOfWeek();
-			if (dayOfWeek == 6) {
-				/* saturday */
+			if (dayOfWeek == 6) { /* weekend */
 				if (ganttPrint.scaleLevel == SCALE_LEVEL.DAILY
 						|| ganttPrint.scaleLevel == SCALE_LEVEL.WEEKLY) {
 					DateTime d1 = d0.plusDays(1);
@@ -52,6 +49,8 @@ class PdfPCellEventImpl implements PdfPCellEvent {
 					paintWeekend(canvas, position, x1, w0);
 				}
 			}
+			if (ganttPrint.scaleLevel == SCALE_LEVEL.DAILY)
+				paintDay(canvas, position, x0, d0);
 			if (dayOfWeek == 1)
 				if (ganttPrint.scaleLevel == SCALE_LEVEL.WEEKLY)
 					paintWeek(canvas, position, x0, d0);
