@@ -24,6 +24,7 @@ import com.lowagie.text.pdf.PdfPCellEvent;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfPageEvent;
 import com.lowagie.text.pdf.PdfWriter;
+import com.mincom.viva.ganttprint.GanttPrint.SCALE_LEVEL;
 
 public class GanttPrint {
 
@@ -76,6 +77,12 @@ public class GanttPrint {
 
 	DateTime first = null, last = null;
 	private long range;
+
+	enum SCALE_LEVEL {
+		DAILY, WEEKLY, MONTHLY;
+	}
+
+	SCALE_LEVEL scaleLevel;
 
 	public GanttPrint(Schedule s) {
 		this(s, SIZE.A2);
@@ -140,6 +147,7 @@ public class GanttPrint {
 			throw new IllegalStateException("first start date [" + first
 					+ "] is after last finish date [" + last + "]");
 		padDateRange();
+		establishScaleLevel();
 	}
 
 	private void padDateRange() {
@@ -164,6 +172,17 @@ public class GanttPrint {
 		first = f;
 		last = l;
 		range = last.getMillis() - first.getMillis();
+	}
+
+	private void establishScaleLevel() {
+		Duration d = new Duration(range);
+		if (d.isLongerThan(Duration.standardDays(365))) {
+			scaleLevel = SCALE_LEVEL.MONTHLY;
+		} else if (d.isLongerThan(Duration.standardDays(30))) {
+			scaleLevel = SCALE_LEVEL.WEEKLY;
+		} else {
+			scaleLevel = SCALE_LEVEL.DAILY;
+		}
 	}
 
 	private void printScheduleData() throws DocumentException {
@@ -375,11 +394,20 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 				paintWeekend(canvas, position, x0, w0);
 				paintWeekend(canvas, position, x1, w0);
 			}
+			if (dayOfWeek == 1) {
+				paintWeek(canvas, position, x0);
+			}
+			int dayOfMonth = d0.getDayOfMonth();
+			if (dayOfMonth == 1) {
+				paintMonth(canvas, position, x0);
+			}
 		}
 	}
 
 	private void paintDay(PdfContentByte canvas, Rectangle position, float f) {
-		canvas.setLineWidth(0.1f);
+		if (ganttPrint.scaleLevel != SCALE_LEVEL.DAILY)
+			return;
+		canvas.setLineWidth(0.2f);
 		canvas.setColorStroke(Color.black);
 		float x = position.getLeft() + f;
 		canvas.moveTo(x, position.getBottom());
@@ -389,12 +417,36 @@ class GanttPrintPdfPCellEvent implements PdfPCellEvent {
 
 	private void paintWeekend(PdfContentByte canvas, Rectangle position,
 			float f, float w) {
+		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
+			return;
 		canvas.setColorFill(Color.lightGray);
 		float x = position.getLeft() + f;
 		float y = position.getBottom();
 		float h = position.getHeight();
 		canvas.rectangle(x, y, w, h);
 		canvas.fill();
+	}
+
+	private void paintWeek(PdfContentByte canvas, Rectangle position, float f) {
+		if (ganttPrint.scaleLevel == SCALE_LEVEL.MONTHLY)
+			return;
+		canvas.setLineWidth(0.5f);
+		canvas.setColorStroke(Color.black);
+		float x = position.getLeft() + f;
+		canvas.moveTo(x, position.getBottom());
+		canvas.lineTo(x, position.getTop());
+		canvas.stroke();
+	}
+
+	private void paintMonth(PdfContentByte canvas, Rectangle position, float f) {
+		if (ganttPrint.scaleLevel != SCALE_LEVEL.MONTHLY)
+			return;
+		canvas.setLineWidth(0.5f);
+		canvas.setColorStroke(Color.black);
+		float x = position.getLeft() + f;
+		canvas.moveTo(x, position.getBottom());
+		canvas.lineTo(x, position.getTop());
+		canvas.stroke();
 	}
 
 	private void paintBar(PdfContentByte canvas, Rectangle position) {
